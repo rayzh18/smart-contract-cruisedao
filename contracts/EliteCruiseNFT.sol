@@ -55,11 +55,10 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         return super.tokenURI(tokenId);
     }
 
-    function mint(address _to, string memory _tokenURI) public payable {
+    function mint(string memory _tokenURI) public payable {
         if (msg.sender == cruiseOperationsWallet) {
             require(withheldSupply > 0, "Supply exceeded");
-            _safeMint(_to, mintIndex);
-            mintIndex += 1;
+            _safeMint(msg.sender, mintIndex);
             _setTokenURI(mintIndex, _tokenURI);
             withheldSupply -= 1;
 
@@ -75,12 +74,12 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
                 5
             );
             allCruiseElite[mintIndex] = newCruiseElite;
+            mintIndex += 1;
         } else {
             require(availSupply > 0, "Supply exceeded");
             require(mintedTotal[msg.sender] < maxCountPerWallet, "Count per wallet exceeded");
             require(msg.value == mintPrice, "Ether value incorrect");
-            _safeMint(_to, mintIndex);
-            mintIndex += 1;
+            _safeMint(msg.sender, mintIndex);
             _setTokenURI(mintIndex, _tokenURI);
             mintedTotal[msg.sender] += 1;
             availSupply -= 1;
@@ -97,6 +96,7 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
                 5
             );
             allCruiseElite[mintIndex] = newCruiseElite;
+            mintIndex += 1;
             distribute(mintPrice);
         }
         
