@@ -15,6 +15,7 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     uint256 public withheldSupply = 50;
     uint256 public mintPrice = 1 ether;
     uint32 public denominator = 1000;
+    address public daoContract;
 
     mapping(uint256 => CruiseMembership) public allCruiseElite;
 
@@ -31,7 +32,9 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
     address private  cruiseDaoWalletForCommunity = 0x12A75919B84810e02B1BD4b30b9C47da4c893B10;
     address private  cruiseDaoCharityWallet = 0xD48b024D9d0751f19Ab3D255101405EB534Ea76A;
 
-    constructor() ERC721("EliteCruiseNFT", "ECN") {}
+    constructor() ERC721("EliteCruiseNFT", "ECN") {
+        daoContract = msg.sender;
+    }
 
     function _baseURI() internal view override returns (string memory) {
         return baseURI;
@@ -53,6 +56,10 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         returns (string memory)
     {
         return super.tokenURI(tokenId);
+    }
+
+    function getMintIndex() public view returns(uint256) {
+        return mintIndex;
     }
 
     function mint(string memory _tokenURI) public payable {
@@ -147,9 +154,9 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
 
     function distribute(uint256 _amount) private {
         payable(cruiseOperationsWallet).transfer(_amount * 150 / denominator);
-        payable(devWallet).transfer(_amount * 25 / denominator);
-        payable(investorGBWallet).transfer(_amount * 35 / denominator);
-        payable(futureEmploymentWallet).transfer(_amount * 40 / denominator);
+        payable(devWallet).transfer(_amount * 40 / denominator);
+        payable(investorGBWallet).transfer(_amount * 40 / denominator);
+        payable(futureEmploymentWallet).transfer(_amount * 20 / denominator);
         payable(ownershipWallet).transfer(_amount * 200 / denominator);
         payable(eMaloneCDWallet).transfer(_amount * 100 / denominator);
         payable(cruiseDaoWalletForCommunity).transfer(_amount * 400 / denominator);
@@ -183,8 +190,6 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
 
         // transfer the token from owner to the caller of the function (buyer)
         _transfer(tokenOwner, msg.sender, _tokenId);
-        mintedTotal[tokenOwner] -= 1;
-        mintedTotal[msg.sender] += 1;
         
         
         // update the token's previous owner
@@ -209,8 +214,27 @@ contract EliteCruiseNFT is ERC721, ERC721URIStorage, Ownable, ReentrancyGuard {
         cruiseElite.previousOwner = cruiseElite.currentOwner;
         cruiseElite.currentOwner = _to;
         allCruiseElite[_tokenId] = cruiseElite;
-        mintedTotal[tokenOwner] -= 1;
-        mintedTotal[_to] += 1;
+    }
+
+    function withdrawFunds(address _to) external onlyOwner {
+        payable(_to).transfer(address(this).balance);
+    }
+
+    function setDaoContract(address _dao) public onlyOwner {
+        daoContract = _dao;
+    }
+
+    function decreaseVotingEntry(uint256 _tokenId, uint16 _decreaseCount) external {
+        require(msg.sender != address(0), "Shouldn't be empty address");
+        require(msg.sender == daoContract, "Should be DAO contract");
+        CruiseMembership memory cruiseSelect = allCruiseElite[_tokenId];
+        require(cruiseSelect.votingCount >= _decreaseCount, "Left entries shouldn't be smaller than decrease count");
+        cruiseSelect.votingCount -= _decreaseCount;
+        allCruiseElite[_tokenId] = cruiseSelect;
+    }
+
+    function getTokenData(uint256 _tokenId) external view returns (CruiseMembership memory) {
+        return allCruiseElite[_tokenId];
     }
 
 }
